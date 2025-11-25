@@ -1,109 +1,55 @@
-const { Sequelize, DataTypes } = require('sequelize');
 require('dotenv').config();
+const { Sequelize } = require('sequelize');
 
-// Initialize database connection
-const db = new Sequelize({
+// Create database connection
+const sequelize = new Sequelize({
     dialect: process.env.DB_TYPE,
-    storage: `database/${process.env.DB_NAME}` || 'database/company_projects.db',
-    logging: false
+    storage: process.env.DB_NAME
 });
 
-// User Model
-const User = db.define('User', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    email: {
-        type: DataTypes.STRING,
+// Define User model
+const User = sequelize.define('User', {
+    name: Sequelize.STRING,
+    email: Sequelize.STRING,
+    password: Sequelize.STRING,
+    role: {
+        type: Sequelize.STRING,
         allowNull: false,
-        unique: true
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    // TODO: Add role field (employee, manager, admin)
-});
-
-// Project Model
-const Project = db.define('Project', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    description: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    status: {
-        type: DataTypes.STRING,
-        defaultValue: 'active'
+        defaultValue: 'employee',
+        validate: {
+            isIn: [['employee', 'manager', 'admin']]
+        }
     }
 });
 
-// Task Model
-const Task = db.define('Task', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
-    title: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    description: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    status: {
-        type: DataTypes.STRING,
-        defaultValue: 'pending'
-    },
-    priority: {
-        type: DataTypes.STRING,
-        defaultValue: 'medium'
-    }
+// Define Project model
+const Project = sequelize.define('Project', {
+    name: Sequelize.STRING,
+    description: Sequelize.STRING,
+    status: Sequelize.STRING
 });
 
-// Define Relationships
-User.hasMany(Project, { foreignKey: 'managerId', as: 'managedProjects' });
-Project.belongsTo(User, { foreignKey: 'managerId', as: 'manager' });
+// Define Task model
+const Task = sequelize.define('Task', {
+    title: Sequelize.STRING,
+    description: Sequelize.STRING,
+    status: Sequelize.STRING,
+    priority: Sequelize.STRING
+});
+
+// Relationships
+User.hasMany(Project, { foreignKey: 'managerId' });
+Project.belongsTo(User, { foreignKey: 'managerId' });
 
 Project.hasMany(Task, { foreignKey: 'projectId' });
 Task.belongsTo(Project, { foreignKey: 'projectId' });
 
-User.hasMany(Task, { foreignKey: 'assignedUserId', as: 'assignedTasks' });
-Task.belongsTo(User, { foreignKey: 'assignedUserId', as: 'assignedUser' });
+User.hasMany(Task, { foreignKey: 'assignedUserId' });
+Task.belongsTo(User, { foreignKey: 'assignedUserId' });
 
-// Initialize database
-async function initializeDatabase() {
-    try {
-        await db.authenticate();
-        console.log('Database connection established successfully.');
-        
-        await db.sync({ force: false });
-        console.log('Database synchronized successfully.');
-    } catch (error) {
-        console.error('Unable to connect to database:', error);
-    }
-}
-
-initializeDatabase();
-
+// Export for use in seed.js + server.js
 module.exports = {
-    db,
+    db: sequelize,
     User,
     Project,
     Task
