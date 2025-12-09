@@ -1,56 +1,63 @@
-require('dotenv').config();
-const { Sequelize } = require('sequelize');
+const { Sequelize, DataTypes } = require('sequelize');
+const path = require('path');
 
-// Create database connection
 const sequelize = new Sequelize({
-    dialect: process.env.DB_TYPE,
-    storage: process.env.DB_NAME
+  dialect: 'sqlite',
+  storage: path.join(__dirname, '../task_management.db'),
+  logging: false
 });
 
-// Define User model
 const User = sequelize.define('User', {
-    name: Sequelize.STRING,
-    email: Sequelize.STRING,
-    password: Sequelize.STRING,
-    role: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        defaultValue: 'employee',
-        validate: {
-            isIn: [['employee', 'manager', 'admin']]
-        }
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: true
     }
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  role: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'employee',
+    validate: {
+      isIn: [['employee', 'manager', 'admin']]
+    }
+  }
 });
 
-// Define Project model
 const Project = sequelize.define('Project', {
-    name: Sequelize.STRING,
-    description: Sequelize.STRING,
-    status: Sequelize.STRING
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  description: DataTypes.TEXT
 });
 
-// Define Task model
 const Task = sequelize.define('Task', {
-    title: Sequelize.STRING,
-    description: Sequelize.STRING,
-    status: Sequelize.STRING,
-    priority: Sequelize.STRING
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  completed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  }
 });
 
-// Relationships
-User.hasMany(Project, { foreignKey: 'managerId' });
-Project.belongsTo(User, { foreignKey: 'managerId' });
+User.hasMany(Task);
+Task.belongsTo(User);
 
-Project.hasMany(Task, { foreignKey: 'projectId' });
-Task.belongsTo(Project, { foreignKey: 'projectId' });
+Project.hasMany(Task);
+Task.belongsTo(Project);
 
-User.hasMany(Task, { foreignKey: 'assignedUserId' });
-Task.belongsTo(User, { foreignKey: 'assignedUserId' });
-
-// Export for use in seed.js + server.js
 module.exports = {
-    db: sequelize,
-    User,
-    Project,
-    Task
+  sequelize,
+  User,
+  Project,
+  Task
 };
